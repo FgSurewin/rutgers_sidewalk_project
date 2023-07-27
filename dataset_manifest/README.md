@@ -13,7 +13,7 @@ To avoide the conflict with the existing python environment, we recommend to cre
 python3 -m venv .env
 . .env/bin/activate
 pip install -U pip
-pip install -r utils/dataset_manifest/requirements.in
+pip install -r requirements.in
 ```
 
 
@@ -21,7 +21,7 @@ pip install -r utils/dataset_manifest/requirements.in
 
 Examples
 ```bash
-python utils/dataset_manifest/create.py --output-dir ./output ./Images/
+python create.py --output-dir ./output ./Images/
 ```
 In the above example, the dataset manifest will be generated in the `./output` folder. The images are in the `./Images` folder.
 (Please note that the `./output` folder should be created **before** running the above command.)
