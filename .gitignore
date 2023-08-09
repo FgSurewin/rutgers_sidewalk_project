@@ -4,5 +4,5 @@ data/
 **/*.py[cod]
 **/output/
 **/images/
-
+**/data/
 **/.vscode/

@@ -1,4 +1,5 @@
 import json
+import argparse
 
 
 class Prefix:
@@ -33,8 +34,14 @@ class Prefix:
 
 
 if __name__ == "__main__":
-    input_dir = "./output/manifest.jsonl"
-    output_dir = "./output/NB_FullStack_0727_manifest.jsonl"
-    prefix = "NB_FullStack_0727"
-    prefix = Prefix(input_dir, output_dir, prefix)
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("--input_dir", type=str, required=True)
+    argparser.add_argument("--output_dir", type=str, required=True)
+    argparser.add_argument("--prefix", type=str, required=True)
+    args = argparser.parse_args()
+
+    # input_dir = "./output/manifest.jsonl"
+    # output_dir = "./output/NB_FullStack_0727_manifest.jsonl"
+    # prefix = "NB_FullStack_0727"
+    prefix = Prefix(args.input_dir, args.output_dir, args.prefix)
     prefix.process()

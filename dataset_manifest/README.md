@@ -53,3 +53,21 @@ optional arguments:
 {"name":"image3","extension":".jpg","width":301,"height":167,"meta":{"related_images":[]},"checksum":"0e454a6f4a13d56c82890c98be063663"}
 
 ```
+
+
+
+## Supplementary Scripts
+### Prefixing the image names
+When we use the manifest generoator to generate the manifest for the images, the image names are not prefixed with the folder name. This script is used to prefix the image names with the folder name.
+
+```bash
+python prefix.py --input_dir ./output/manifest.jsonl --output_dir ./output/NB_FullStack_0727_manifest.jsonl --prefix NB_FullStack_0727
+```
+
+### Check duplicated file names
+It is important to make sure there are no duplicated file names in the dataset. This script is used to check the duplicated file names. If there are duplicated file names, the script will print out the duplicated file names via the warning message.
+
+```bash
+python check_filenames.py --file_path ./output/NB_FullStack_0727_manifest.jsonl
+```
+```
