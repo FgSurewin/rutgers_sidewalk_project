@@ -6,3 +6,5 @@ data/
 **/images/
 **/data/
 **/.vscode/
+**/checkpoint/
+**/lightning_logs/
