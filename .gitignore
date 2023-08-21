@@ -8,3 +8,4 @@ data/
 **/.vscode/
 **/checkpoint/
 **/lightning_logs/
+**/tb_logs/

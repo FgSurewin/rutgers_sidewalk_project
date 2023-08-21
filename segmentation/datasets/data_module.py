@@ -8,34 +8,13 @@ from torchvision.transforms import transforms as T
 
 class DataModule(pl.LightningDataModule):
     def __init__(
-        self,
-        data_dir,
-        batch_size,
-        num_workers=4,
-        random_seed=42,
-        img_transform=None,
-        mask_transform=None,
-        **kwargs
+        self, data_dir, batch_size, num_workers=4, random_seed=42, **kwargs
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.random_seed = random_seed
-        if img_transform is None:
-            self.img_transform = T.Compose(
-                [
-                    T.Resize((512, 512)),
-                    T.ToTensor(),
-                    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                ]
-            )
-        else:
-            self.img_transform = img_transform
-        if mask_transform is None:
-            self.mask_transform = T.Compose([T.Resize((512, 512)), T.ToTensor()])
-        else:
-            self.mask_transform = mask_transform
         self.kwargs = kwargs
         self.num_batches_train = None
 
@@ -49,15 +28,11 @@ class DataModule(pl.LightningDataModule):
             self.train_dataset = self.dataset_class(
                 data_dir=self.data_dir,
                 df=self.train_df,
-                img_transform=self.img_transform,
-                mask_transform=self.mask_transform,
                 **self.kwargs,
             )
             self.valid_dataset = self.dataset_class(
                 data_dir=self.data_dir,
                 df=self.valid_df,
-                img_transform=self.img_transform,
-                mask_transform=self.mask_transform,
                 **self.kwargs,
             )
 
@@ -65,8 +40,6 @@ class DataModule(pl.LightningDataModule):
             self.test_dataset = self.dataset_class(
                 data_dir=self.data_dir,
                 df=self.test_df,
-                img_transform=self.img_transform,
-                mask_transform=self.mask_transform,
                 **self.kwargs,
             )
 

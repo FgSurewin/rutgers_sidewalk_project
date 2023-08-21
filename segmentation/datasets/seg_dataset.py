@@ -1,9 +1,13 @@
 import os
+import torch
+import numpy as np
 import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
-from torchvision.transforms import transforms as T
+import torchvision.transforms as T
+import cv2
+import albumentations as A
 
 
 class SegDataset(Dataset):
@@ -11,8 +15,6 @@ class SegDataset(Dataset):
         self,
         data_dir,
         df,
-        img_transform=None,
-        mask_transform=None,
         origin_img_folder="JPEGImages",
         **kwargs,
     ) -> None:
@@ -36,20 +38,25 @@ class SegDataset(Dataset):
             os.path.join(mask_dir, img_name) for img_name in self.mask_names
         ]
 
-        if img_transform is None:
-            self.img_transform = T.Compose(
-                [
-                    T.Resize((512, 512)),
-                    T.ToTensor(),
-                    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                ]
-            )
-        else:
-            self.img_transform = img_transform
-        if mask_transform is None:
-            self.mask_transform = T.Compose([T.Resize((512, 512)), T.ToTensor()])
-        else:
-            self.mask_transform = mask_transform
+        # Define common transformations for both image and mask
+        self.common_transform = A.Compose(
+            [
+                A.HorizontalFlip(p=0.5),
+                A.VerticalFlip(p=0.5),
+                A.ShiftScaleRotate(
+                    shift_limit=0.05, scale_limit=0.05, rotate_limit=15, p=0.5
+                ),
+            ]
+        )
+
+        # Define individual resize transformations
+        self.img_resize_transform = A.Resize(512, 512, interpolation=cv2.INTER_LINEAR)
+        self.mask_resize_transform = A.Resize(512, 512, interpolation=cv2.INTER_NEAREST)
+
+        # Define image normalization transformation
+        self.img_nor_transform = A.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        )
 
         self.kwargs = kwargs
 
@@ -63,9 +70,26 @@ class SegDataset(Dataset):
         img = Image.open(img_path).convert("RGB")
         mask = Image.open(mask_path)
 
-        img = self.img_transform(img)
-        mask = self.mask_transform(mask).squeeze(0)
-        mask = mask.long()
+        img_np = np.array(img)
+        mask_np = np.array(mask)
+
+        # Apply individual resize transformations
+        img_resize = self.img_resize_transform(image=img_np)["image"]
+        mask_resize = self.mask_resize_transform(image=mask_np)["image"]
+
+        # Apply common transformations
+        transformed = self.common_transform(image=img_resize, mask=mask_resize)
+        img = transformed["image"]
+        mask = transformed["mask"]
+
+        # Apply image normalization
+        img = self.img_nor_transform(image=img)["image"]
+
+        # Convert to tensor
+        img = torch.tensor(np.transpose(img, (2, 0, 1)))
+        mask = torch.tensor(mask).long()
+
+        # mask = mask.long()
 
         return img, mask
 
@@ -85,9 +109,9 @@ if __name__ == "__main__":
 
     # Plot the image
     # to_pil_image = T.ToPILImage()
-    # img_pil = to_pil_image(img)
-    # plt.imshow(img_pil)
-    # plt.show()
-    # mask_pil = to_pil_image(mask)
-    # plt.imshow(mask_pil)
-    # plt.show()
+    img_np = img.permute(1, 2, 0).detach().cpu().numpy()
+    plt.imshow(img_np)
+    plt.show()
+    mask_np = mask.detach().cpu().numpy().astype(np.uint8)
+    plt.imshow(mask_np)
+    plt.show()

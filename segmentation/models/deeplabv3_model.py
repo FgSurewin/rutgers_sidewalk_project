@@ -3,7 +3,10 @@ import torchmetrics
 from typing import Any
 import pytorch_lightning as pl
 import torch.nn.functional as F
-from torchvision.models.segmentation import deeplabv3_resnet101
+from torchvision.models.segmentation import (
+    deeplabv3_resnet101,
+    DeepLabV3_ResNet101_Weights,
+)
 
 
 class DeepLabV3(pl.LightningModule):
@@ -24,7 +27,9 @@ class DeepLabV3(pl.LightningModule):
         self.epochs = epochs
         self.num_classes = num_classes
         self.aux_importance_ratio = aux_importance_ratio
-        self.model = deeplabv3_resnet101(num_classes=num_classes, aux_loss=has_aux_loss)
+        self.model = self.prepare_model(
+            num_classes=num_classes, has_aux_loss=has_aux_loss
+        )
         self.kwargs = kwargs
         self.train_mean_iou_metric = torchmetrics.JaccardIndex(
             num_classes=num_classes, task="multiclass", average="macro"
@@ -55,7 +60,7 @@ class DeepLabV3(pl.LightningModule):
             prog_bar=True,
             logger=True,
         )
-        metrics = self.train_mean_iou_metric(output["out"], target)
+        metrics = self.train_mean_iou_metric(output["out"].argmax(1), target)
         self.log(
             "train_mean_iou",
             metrics,
@@ -74,16 +79,25 @@ class DeepLabV3(pl.LightningModule):
             "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
         self.val_mean_iou_metric.update(output["out"], target)
-        return loss
-
-    def on_validation_epoch_end(self) -> None:
-        output = self.val_mean_iou_metric.compute()
+        metrics = self.val_mean_iou_metric(output["out"].argmax(1), target)
         self.log(
             "val_mean_iou",
-            output,
+            metrics,
+            on_step=False,
+            on_epoch=True,
             prog_bar=True,
             logger=True,
         )
+        return loss
+
+    # def on_validation_epoch_end(self) -> None:
+    #     output = self.val_mean_iou_metric.compute()
+    #     self.log(
+    #         "val_mean_iou",
+    #         output,
+    #         prog_bar=True,
+    #         logger=True,
+    #     )
 
     def test_step(self, batch: Any, batch_idx: int) -> Any:
         data, target = batch
@@ -92,17 +106,26 @@ class DeepLabV3(pl.LightningModule):
         self.log(
             "test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
         )
-        self.test_mean_iou_metric.update(output["out"], target)
-        return loss
-
-    def on_test_epoch_end(self) -> None:
-        output = self.test_mean_iou_metric.compute()
+        # self.test_mean_iou_metric.update(output["out"], target)
+        metrics = self.test_mean_iou_metric(output["out"].argmax(1), target)
         self.log(
             "test_mean_iou",
-            output,
+            metrics,
+            on_step=False,
+            on_epoch=True,
             prog_bar=True,
             logger=True,
         )
+        return loss
+
+    # def on_test_epoch_end(self) -> None:
+    #     output = self.test_mean_iou_metric.compute()
+    #     self.log(
+    #         "test_mean_iou",
+    #         output,
+    #         prog_bar=True,
+    #         logger=True,
+    #     )
 
     def configure_optimizers(self) -> Any:
         optimizer = torch.optim.SGD(
@@ -157,3 +180,16 @@ class DeepLabV3(pl.LightningModule):
                 ) ** 0.9
 
         return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=f)
+
+    def prepare_model(self, num_classes, has_aux_loss):
+        model = deeplabv3_resnet101(
+            weights=DeepLabV3_ResNet101_Weights.DEFAULT, aux_loss=has_aux_loss
+        )
+        model.classifier[-1] = torch.nn.Conv2d(
+            256, num_classes, kernel_size=(1, 1), stride=(1, 1)
+        )
+        if has_aux_loss:
+            model.aux_classifier[-1] = torch.nn.Conv2d(
+                256, num_classes, kernel_size=(1, 1), stride=(1, 1)
+            )
+        return model

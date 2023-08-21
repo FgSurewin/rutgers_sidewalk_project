@@ -6,6 +6,7 @@ from models.deeplabv3_model import DeepLabV3
 from pytorch_lightning import Trainer
 from torchvision.transforms import transforms as T
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.loggers import TensorBoardLogger
 
 
 def main(
@@ -17,36 +18,11 @@ def main(
     MODEL_NAME="models",
 ):
     # Create data module
-    # Shared transformations for both image and mask
-    spatial_transforms = T.Compose(
-        [
-            T.Resize((512, 512)),
-            T.RandomHorizontalFlip(),
-            T.RandomVerticalFlip(),
-            T.RandomRotation(degrees=15),
-        ]
-    )
-    # Additional transformations just for images
-    img_color_transforms = T.Compose(
-        [
-            T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
-
-    # Transformations just for masks
-    mask_transforms = T.Compose([T.ToTensor()])
-
-    img_transform = T.Compose([spatial_transforms, img_color_transforms])
-    mask_transform = T.Compose([spatial_transforms, mask_transforms])
-
     data_module = DataModule(
         data_dir=DATA_DIR,
         batch_size=BATCH_SIZE,
         num_workers=10,
         random_seed=42,
-        img_transform=img_transform,
-        mask_transform=mask_transform,
     )
     data_module.setup(stage="fit")
     train_loader = data_module.train_dataloader()
@@ -57,7 +33,7 @@ def main(
         num_batches=num_batches_train,
         epochs=EPOCHS,
         num_classes=NUM_CLASSES,
-        has_aux_loss=False,
+        has_aux_loss=True,
     )
 
     # Create callbacks
@@ -76,12 +52,14 @@ def main(
     # Set torch float precision
     torch.set_float32_matmul_precision("medium")
     DEVICE = "gpu" if torch.cuda.is_available() else "cpu"
+    logger = TensorBoardLogger("tb_logs", name=MODEL_NAME)
     # Train model
     trainer = Trainer(
         accelerator=DEVICE,
         max_epochs=EPOCHS,
-        log_every_n_steps=4,
+        log_every_n_steps=2,
         fast_dev_run=DEV_RUN,
+        logger=logger,
         callbacks=[checkpoint_callback],
     )
     trainer.fit(model=model, datamodule=data_module)
@@ -99,9 +77,9 @@ if __name__ == "__main__":
 
     num_classes = len(label_info["label_to_id"])
 
-    epochs = 5
+    epochs = 15
     batch_size = 8
-    model_name = "sidewalk_deeplabv3_v3_epoch_5"
+    model_name = "v5_new_sidewalk_deeplabv3_epoch_15"
     dev_run = False
     main(
         DATA_DIR=data_dir,
