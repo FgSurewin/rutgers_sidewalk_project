@@ -16,6 +16,7 @@ class SegDataset(Dataset):
         data_dir,
         df,
         origin_img_folder="JPEGImages",
+        is_augment=False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -23,6 +24,7 @@ class SegDataset(Dataset):
         self.df = df
         self.img_names = df["original_name"].values
         self.mask_names = df["mask_file_name"].values
+        self.is_augment = is_augment
 
         # Get image paths
         original_img_dir = os.path.join(self.data_dir, origin_img_folder)
@@ -78,16 +80,22 @@ class SegDataset(Dataset):
         mask_resize = self.mask_resize_transform(image=mask_np)["image"]
 
         # Apply common transformations
-        transformed = self.common_transform(image=img_resize, mask=mask_resize)
-        img = transformed["image"]
-        mask = transformed["mask"]
+        if self.is_augment:
+            transformed = self.common_transform(image=img_resize, mask=mask_resize)
+            img = transformed["image"]
+            mask = transformed["mask"]
+        else:
+            img = img_resize
+            mask = mask_resize
 
         # Apply image normalization
         img = self.img_nor_transform(image=img)["image"]
+        # img = self.img_nor_transform(image=img_resize)["image"]
 
         # Convert to tensor
         img = torch.tensor(np.transpose(img, (2, 0, 1)))
         mask = torch.tensor(mask).long()
+        # mask = torch.tensor(mask_resize).long()
 
         # mask = mask.long()
 
@@ -99,6 +107,7 @@ if __name__ == "__main__":
     seg_dataset = SegDataset(
         data_dir=data_dir,
         df=pd.read_csv(os.path.join(data_dir, "train.csv")),
+        is_augment=False,
     )
     print(len(seg_dataset))
 

@@ -28,11 +28,13 @@ class DataModule(pl.LightningDataModule):
             self.train_dataset = self.dataset_class(
                 data_dir=self.data_dir,
                 df=self.train_df,
+                is_augment=True,
                 **self.kwargs,
             )
             self.valid_dataset = self.dataset_class(
                 data_dir=self.data_dir,
                 df=self.valid_df,
+                is_augment=False,
                 **self.kwargs,
             )
 
@@ -40,6 +42,7 @@ class DataModule(pl.LightningDataModule):
             self.test_dataset = self.dataset_class(
                 data_dir=self.data_dir,
                 df=self.test_df,
+                is_augment=False,
                 **self.kwargs,
             )
 

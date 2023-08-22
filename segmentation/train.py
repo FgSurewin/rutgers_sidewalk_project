@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
     num_classes = len(label_info["label_to_id"])
 
-    epochs = 15
+    epochs = 50
     batch_size = 8
-    model_name = "v5_new_sidewalk_deeplabv3_epoch_15"
+    model_name = f"v2_augment_sidewalk_deeplabv3_epoch_{epochs}"
     dev_run = False
     main(
         DATA_DIR=data_dir,
